@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EjemploPaginacion.Data;
+using EjemploPaginacion.Helpers;
 using EjemploPaginacion.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,46 +21,16 @@ namespace EjemploPaginacion.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetProductos(int page = 1, int pageSize = 3)
+        public async Task<IActionResult> GetProductos([FromQuery] PaginationParameters parameters)
         {
-            // Validar página 
-            if (page < 1)
-            {
-                return BadRequest("La página debe ser mayor o igual a 1. ");
-            }
+            // Si llegaste aqui, Page y PageSize son Validos
+            var query = _context.Productos.AsNoTracking().OrderBy(p => p.Id);
 
-            // Validar tamaño de la página
-            if (pageSize < 1 || pageSize > 100)
-            {
-                return BadRequest("El tamaño de la página debe de estar entre 1 y 100 .");
-            }
-
-            //Total de Pproductos
-            var totalItems = await _context.Productos.CountAsync();
-
-            // Calcular total de páginas
-            var totalPages = (int)Math.Ceiling(
-                totalItems / (double)pageSize
+            var response = await PaginationHelper.PaginationAsync(
+                query,
+                parameters
             );
 
-            // Obtener productos de la página solicitada
-            var productos = await _context.Productos
-            .AsNoTracking()
-            .OrderBy(p => p.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
-
-            // Crear respuesta
-            var response = new PagedResponse<Producto>
-            {
-                Page = page,
-                PageSize = pageSize,
-                TotalItems = totalItems,
-                TotalPages = totalPages,
-                Items = productos
-            };
             return Ok(response);
         }
 
